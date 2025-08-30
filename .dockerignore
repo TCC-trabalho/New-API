@@ -1,0 +1,32 @@
+# Dependências locais
+node_modules
+vendor
+
+# Configurações de IDE/Editor
+.vscode
+.idea
+*.swp
+
+# Cache e arquivos temporários
+.phpunit.result.cache
+.php-cs-fixer.cache
+.phpstorm.meta.php
+composer.phar
+
+# Logs e cache do Laravel
+storage/*.key
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+
+# Build e outros artefatos
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
