@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use Illuminate\Support\Str;
+use Cloudinary\Configuration\Configuration;
+use Cloudinary\Api\Upload\UploadApi;
 use Illuminate\Http\Request;
 use App\Models\Project;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +17,15 @@ class ProjectController extends Controller
      */
     public function index()
     {
-        $projects = Project::all();
+        $projects = DB::table('projeto as p')
+            ->select('p.*')
+            ->selectSub(function ($q) {
+                $q->from('aluno_grupo as ag')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('ag.id_grupo', 'p.id_grupo');
+            }, 'integrantes')
+            ->get();
+
         return response()->json($projects);
     }
 
@@ -36,19 +47,16 @@ class ProjectController extends Controller
      */
     public function show($id)
     {
-        // 1) Busca o projeto
         $projeto = DB::table('projeto')->where('id_projeto', $id)->first();
         if (!$projeto) {
             return response()->json(['message' => 'Projeto não encontrado'], 404);
         }
 
-        // 2) Busca dados do grupo
         $grupo = DB::table('grupo')
             ->where('id_grupo', $projeto->id_grupo)
             ->select('id_grupo', 'nome', 'descricao', 'data_criacao')
             ->first();
 
-        // 3) Busca integrantes do grupo (via aluno_grupo)
         $integrantes = DB::table('aluno_grupo as ag')
             ->join('aluno as a', 'a.id_aluno', '=', 'ag.id_aluno')
             ->where('ag.id_grupo', $projeto->id_grupo)
@@ -56,9 +64,14 @@ class ProjectController extends Controller
             ->orderBy('a.nomeUsuario')
             ->get();
 
-        // 4) Monta resposta no formato que você pediu
+        $qtdIntegrantes = DB::table('aluno_grupo')
+            ->where('id_grupo', $projeto->id_grupo)
+            ->count();
+
+
         $response = [
             'id_projeto' => $projeto->id_projeto,
+            'foto' => $projeto->foto,
             'titulo' => $projeto->titulo,
             'descricao' => $projeto->descricao,
             'area' => $projeto->area,
@@ -66,12 +79,12 @@ class ProjectController extends Controller
             'objetivo' => $projeto->objetivo,
             'justificativa' => $projeto->justificativa,
             'id_grupo' => $projeto->id_grupo,
-            // bloco do grupo + integrantes
+            'integrantes' => $qtdIntegrantes,
             'grupo' => [
                 'id_grupo' => $grupo?->id_grupo,
                 'nome' => $grupo?->nome,
                 'descricao' => $grupo?->descricao,
-                'integrantes' => $integrantes, // [{ id_aluno, nomeUsuario, ... }]
+                'integrantes' => $integrantes,
             ],
             'id_orientador' => $projeto->id_orientador,
             'qnt_empresas_patrocinam' => $projeto->qnt_empresas_patrocinam,
@@ -95,11 +108,19 @@ class ProjectController extends Controller
      */
     public function listarPorOrientador($id_orientador)
     {
-        // Projetos em que esse orientador participa
-        $projetos = Project::where('id_orientador', $id_orientador)
-            ->orderByDesc('id_projeto')
+        $projetos = DB::table('projeto as p')
+            ->select('p.*')
+            ->selectSub(function ($q) {
+                $q->from('aluno_grupo as ag')
+                  ->selectRaw('COUNT(*)')
+                  ->whereColumn('ag.id_grupo', 'p.id_grupo');
+            }, 'integrantes')
+            ->where('p.id_orientador', $id_orientador)
+            ->orderByDesc('p.id_projeto')
             ->get();
-
+    
+        $projetos->each(fn ($p) => $p->integrantes = (int) $p->integrantes);
+    
         return response()->json([
             'total' => $projetos->count(),
             'projetos' => $projetos,
@@ -111,10 +132,15 @@ class ProjectController extends Controller
      */
     public function listarPorGrupo($id_grupo)
     {
-        // Projetos do grupo (para uso pelo aluno via id do grupo)
         $projetos = Project::where('id_grupo', $id_grupo)
             ->orderByDesc('id_projeto')
-            ->get();
+            ->get()
+            ->map(function ($projeto) {
+                $projeto->integrantes = DB::table('aluno_grupo')
+                    ->where('id_grupo', $projeto->id_grupo)
+                    ->count();
+                return $projeto;
+            });
 
         return response()->json([
             'total' => $projetos->count(),
@@ -131,13 +157,20 @@ class ProjectController extends Controller
             return response()->json(['message' => 'Aluno não encontrado'], 404);
         }
 
-        $projetos = Project::whereIn('id_grupo', function ($q) use ($id_aluno) {
-            $q->select('id_grupo')
-                ->from('aluno_grupo')
-                ->where('id_aluno', $id_aluno);
-        })
-            ->orderByDesc('id_projeto')
+        $projetos = DB::table('projeto as p')
+            ->select('p.*')
+            ->selectSub(function ($q) {
+                $q->from('aluno_grupo as ag')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('ag.id_grupo', 'p.id_grupo');
+            }, 'integrantes')
+            ->whereIn('p.id_grupo', function ($q) use ($id_aluno) {
+                $q->select('id_grupo')->from('aluno_grupo')->where('id_aluno', $id_aluno);
+            })
+            ->orderByDesc('p.id_projeto')
             ->get();
+
+        $projetos->each(fn($p) => $p->integrantes = (int) $p->integrantes);
 
         return response()->json([
             'total' => $projetos->count(),
@@ -150,8 +183,8 @@ class ProjectController extends Controller
      */
     public function store(Request $request)
     {
+        // 1) Validação básica + imagem opcional (até 5MB)
         $data = $request->validate([
-            'foto' => 'nullable|string|max:255',
             'titulo' => 'required|string|max:150',
             'descricao' => 'nullable|string',
             'area' => 'nullable|string|max:50',
@@ -161,11 +194,60 @@ class ProjectController extends Controller
             'justificativa' => 'nullable|string',
             'id_grupo' => 'required|integer|exists:grupo,id_grupo',
             'id_orientador' => 'required|integer|exists:orientador,id_orientador',
+            'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
         ]);
 
-        $project = Project::create($data);
-        return response()->json($project, 201);
+        // 2) Configuração do Cloudinary (v3) p/ este request
+        Configuration::instance([
+            'cloud' => [
+                'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                'api_key' => env('CLOUDINARY_API_KEY'),
+                'api_secret' => env('CLOUDINARY_API_SECRET'),
+            ],
+            'url' => ['secure' => true],
+        ]);
+
+        // 3) Upload (se veio arquivo). Se falhar, lança exceção padrão.
+        if ($request->hasFile('foto')) {
+            $publicId = Str::slug($data['titulo']) . '-' . Str::random(6);
+
+            $upload = (new UploadApi())->upload(
+                $request->file('foto')->getRealPath(),
+                [
+                    'folder' => 'tcc/projetos',
+                    'public_id' => $publicId,
+                    'overwrite' => true,
+                    'resource_type' => 'image',
+                    // otimização web ao servir:
+                    'transformation' => [['quality' => 'auto', 'fetch_format' => 'auto']],
+                ]
+            );
+
+            $data['foto'] = $upload['secure_url'] ?? null;
+        } else {
+            $data['foto'] = null;
+        }
+
+        // 4) Criar e responder
+        $project = Project::create([
+            'titulo' => $data['titulo'],
+            'descricao' => $data['descricao'],
+            'area' => $data['area'],
+            'data_criacao' => $data['data_criacao'],
+            'status' => $data['status'],
+            'objetivo' => $data['objetivo'],
+            'justificativa' => $data['justificativa'],
+            'id_grupo' => $data['id_grupo'],
+            'id_orientador' => $data['id_orientador'],
+            'foto' => $data['foto'], // já vem null ou URL
+        ]);
+
+        return response()->json([
+            'message' => 'Projeto criado com sucesso',
+            'data' => $project,
+        ], 201);
     }
+
 
     /**
      * PUT /api/v1/projetos/{id}

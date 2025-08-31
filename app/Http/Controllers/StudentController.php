@@ -24,8 +24,6 @@ class StudentController extends Controller
         $data = $request->validate([
             'nome' => 'required|string|max:100',
             'biografia' => 'nullable|string',
-            'cpf' => 'required|digits:11|unique:aluno,cpf',
-            'rg' => 'nullable|string|max:20|unique:aluno,rg',
             'email' => 'required|email|max:150|unique:aluno,email',
             'nascimento' => 'nullable|date',
             'telefone' => 'nullable|string|max:20',

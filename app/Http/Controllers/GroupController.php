@@ -72,7 +72,6 @@ class GroupController extends Controller
      */
     public function adicionarIntegrantes(Request $request, $id)
     {
-        // Validação básica
         $request->validate([
             'emails' => 'required|array|min:1',
             'emails.*' => 'required|email',
@@ -81,10 +80,8 @@ class GroupController extends Controller
         $grupoId = $id;
         $emails = $request->input('emails');
 
-        // Recupera os alunos pelos e-mails
         $alunos = Student::whereIn('email', $emails)->get();
 
-        // Verifica se encontrou todos os e-mails
         if (count($alunos) === 0) {
             return response()->json([
                 'message' => 'Nenhum aluno encontrado com os e-mails fornecidos.',

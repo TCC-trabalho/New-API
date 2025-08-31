@@ -28,7 +28,6 @@ class AuthController extends Controller
                 break;
 
             case 'empresa':
-                // Exemplo: empresa autentica por CNPJ + senha
                 $user = Empresa::where('cnpj', $request->input('cnpj'))->first();
                 break;
 
@@ -71,7 +70,6 @@ class AuthController extends Controller
             $payloadUser['qtn_projetos'] = $qtdProjetosOrientador;
         }
 
-        // Retorno final
         return response()->json([
             'message' => 'Login realizado com sucesso',
             'user'    => $payloadUser,
