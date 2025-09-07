@@ -9,6 +9,7 @@ use App\Http\Controllers\OrientadorController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyReviewController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PatrocinioController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -28,6 +29,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/projetos/orientador/{id_orientador}', [ProjectController::class, 'listarPorOrientador']);
     Route::get('/projetos/grupo/{id_grupo}', [ProjectController::class, 'listarPorGrupo']);
 
+    Route::get('empresas', [CompanyController::class, 'index']);
+    Route::get('/empresas/{id}/projetos', [CompanyController::class, 'showWithProjetos']);
+
     Route::get('grupos', [GroupController::class, 'index']);
     Route::get('alunos', [StudentController::class, 'index']);
     Route::get('orientadores', [OrientadorController::class, 'index']);
@@ -42,6 +46,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/grupo/{id}/adicionar-integrantes', [GroupController::class, 'adicionarIntegrantes']);
     Route::post('empresas', [CompanyController::class, 'store']);
     Route::post('empresas/{empresa}/avaliacoes', [CompanyReviewController::class, 'store']);
+    Route::post('/patrocinios', [PatrocinioController::class, 'store']);
 
     //
     // — PUT —

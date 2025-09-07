@@ -41,6 +41,36 @@ class AuthController extends Controller
 
         $payloadUser = $user->toArray();
 
+        if ($tipo === 'empresa') {
+            $empresa = DB::table('empresa')->where('cnpj', $request->cnpj)->first();
+            if (!$empresa) {
+                return response()->json(['message' => 'Empresa não encontrada'], 404);
+            }
+
+            $totalPatrocinios = DB::table('patrocinio')
+                ->where('id_empresa', $empresa->id_empresa)
+                ->count();
+
+            return response()->json([
+                'message' => 'Login realizado com sucesso',
+                'user' => [
+                    'id_empresa' => $empresa->id_empresa,
+                    'nome' => $empresa->nome,
+                    'descricao' => $empresa->descricao,
+                    'setor' => $empresa->setor,
+                    'cnpj' => $empresa->cnpj,
+                    'endereco' => $empresa->endereco,
+                    'email' => $empresa->email,
+                    'telefone' => $empresa->telefone,
+                    'senha' => $empresa->senha,
+                    'qnt_projetos_patrocinados' => $totalPatrocinios,
+                    'tipoUser' => 'empresa',
+                    'foto' => $empresa->foto,
+                ],
+                'tipo' => 'empresa',
+            ], 200);
+        }
+
         if ($tipo === 'aluno') {
             $qtdProjetosAluno = DB::table('projeto as p')
                 ->join('aluno_grupo as ag', 'p.id_grupo', '=', 'ag.id_grupo')
