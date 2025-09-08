@@ -1,11 +1,12 @@
 <?php
-// app/Http/Controllers/CompanyController.php
 
 namespace App\Http\Controllers;
 
+use App\Providers\CloudiNary;
 use Illuminate\Http\Request;
 use App\Models\Company;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CompanyController extends Controller
 {
@@ -19,6 +20,17 @@ class CompanyController extends Controller
         return response()->json($empresas, 200);
     }
 
+    /**
+     * GET /api/v1/empresa/{id}
+     */
+    public function show($id)
+    {
+        $empresa = Company::find($id);
+        if (!$empresa) {
+            return response()->json(['message' => 'Empresa não encontrada'], 404);
+        }
+        return response()->json($empresa, 200);
+    }
 
     /**
      * GET /api/v1/empresas/{id}/projetos
@@ -59,7 +71,7 @@ class CompanyController extends Controller
 
             if ($projeto) {
                 $projeto['data_patrocinio'] = $p->data_patrocinio;
-                $projeto['tipo_apoio']      = $p->tipo_apoio;
+                $projeto['tipo_apoio'] = $p->tipo_apoio;
                 $projetos[] = $projeto;
             }
         }
@@ -71,6 +83,27 @@ class CompanyController extends Controller
         ], 200);
     }
 
+
+    /**
+     * GET /api/v1/empresas/{id}/projetos-patrocinados
+     */
+    public function listarProjetosPatrocinados($id_empresa)
+    {
+        $company = Company::find($id_empresa);
+        if (!$company) {
+            return response()->json(['message' => 'Empresa não encontrada'], 404);
+        }
+
+        $projetos = $company->projects()
+            ->withPivot('data_patrocinio', 'tipo_apoio', 'valorPatrocinio', 'mensagem')
+            ->orderBy('projeto.id_projeto', 'desc')
+            ->get();
+
+        return response()->json([
+            'total_projetos' => $projetos->count(),
+            'projetos_patrocinados' => $projetos,
+        ], 200);
+    }
 
     /**
      * POST /api/v1/empresas
@@ -97,32 +130,43 @@ class CompanyController extends Controller
     /**
      * PUT /api/v1/empresas/{id}
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
-        $company = Company::find($id);
-        if (!$company) {
-            return response()->json(['message' => 'Empresa não encontrada'], 404);
-        }
+        $company = Company::findOrFail($id);
 
         $data = $request->validate([
-            'nome' => 'sometimes|required|string|max:150',
-            'foto' => 'nullable|string|max:255',
-            'descricao' => 'nullable|string',
-            'setor' => 'nullable|string|max:100',
-            'cnpj' => "sometimes|required|digits:14|unique:empresa,cnpj,{$id},id_empresa",
-            'endereco' => 'nullable|string|max:200',
-            'email' => "nullable|email|max:150|unique:empresa,email,{$id},id_empresa",
-            'telefone' => 'nullable|string|max:20',
-            'senha' => 'nullable|string|min:6|max:255',
+            'nome' => ['sometimes', 'string', 'max:150'],
+            'descricao' => ['sometimes', 'string'],
+            'email' => ['sometimes', 'email', 'max:150'],
+            'site' => ['sometimes', 'string', 'max:255'],
+            'status' => ['sometimes', 'in:ativo,inativo'],
+            'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'remover_foto' => ['nullable', 'boolean'],
         ]);
 
-        if (isset($data['senha'])) {
-            $data['senha'] = bcrypt($data['senha']);
+        if ($request->boolean('remover_foto')) {
+            CloudiNary::destroyByUrl($company->foto);
+            $data['foto'] = null;
+        }
+
+        if ($request->hasFile('foto')) {
+            CloudiNary::destroyByUrl($company->foto);
+
+            $nomeBase = $data['nome'] ?? $company->nome ?? 'empresa';
+            $publicId = Str::slug($nomeBase) . '-' . Str::random(6);
+            $secureUrl = CloudiNary::upload($request->file('foto'), $publicId, 'tcc/empresas');
+
+            $data['foto'] = $secureUrl ?? $company->foto;
         }
 
         $company->update($data);
-        return response()->json($company);
+
+        return response()->json([
+            'message' => 'Empresa atualizada com sucesso',
+            'data' => $company->fresh(),
+        ], 200);
     }
+
 
     /**
      * DELETE /api/v1/empresas/{id}

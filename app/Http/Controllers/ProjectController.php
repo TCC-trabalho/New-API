@@ -3,9 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use App\Providers\CloudiNary;
 use Illuminate\Support\Str;
-use Cloudinary\Configuration\Configuration;
-use Cloudinary\Api\Upload\UploadApi;
 use Illuminate\Http\Request;
 use App\Models\Project;
 use Illuminate\Support\Facades\DB;
@@ -31,13 +30,11 @@ class ProjectController extends Controller
 
     public function projetoControlado(Request $request)
     {
-        $limit = $request->query('limit');
+        $limit = $request->query('limit', 4);
 
-        if ($limit) {
-            $projects = Project::limit($limit)->get();
-        } else {
-            $projects = Project::all();
-        }
+        $projects = Project::inRandomOrder()
+            ->limit($limit)
+            ->get();
 
         return response()->json($projects);
     }
@@ -112,15 +109,15 @@ class ProjectController extends Controller
             ->select('p.*')
             ->selectSub(function ($q) {
                 $q->from('aluno_grupo as ag')
-                  ->selectRaw('COUNT(*)')
-                  ->whereColumn('ag.id_grupo', 'p.id_grupo');
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('ag.id_grupo', 'p.id_grupo');
             }, 'integrantes')
             ->where('p.id_orientador', $id_orientador)
             ->orderByDesc('p.id_projeto')
             ->get();
-    
-        $projetos->each(fn ($p) => $p->integrantes = (int) $p->integrantes);
-    
+
+        $projetos->each(fn($p) => $p->integrantes = (int) $p->integrantes);
+
         return response()->json([
             'total' => $projetos->count(),
             'projetos' => $projetos,
@@ -183,7 +180,6 @@ class ProjectController extends Controller
      */
     public function store(Request $request)
     {
-        // 1) Validação básica + imagem opcional (até 5MB)
         $data = $request->validate([
             'titulo' => 'required|string|max:150',
             'descricao' => 'nullable|string',
@@ -197,49 +193,26 @@ class ProjectController extends Controller
             'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
         ]);
 
-        // 2) Configuração do Cloudinary (v3) p/ este request
-        Configuration::instance([
-            'cloud' => [
-                'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
-                'api_key' => env('CLOUDINARY_API_KEY'),
-                'api_secret' => env('CLOUDINARY_API_SECRET'),
-            ],
-            'url' => ['secure' => true],
-        ]);
-
-        // 3) Upload (se veio arquivo). Se falhar, lança exceção padrão.
+        // Upload opcional
         if ($request->hasFile('foto')) {
             $publicId = Str::slug($data['titulo']) . '-' . Str::random(6);
-
-            $upload = (new UploadApi())->upload(
-                $request->file('foto')->getRealPath(),
-                [
-                    'folder' => 'tcc/projetos',
-                    'public_id' => $publicId,
-                    'overwrite' => true,
-                    'resource_type' => 'image',
-                    // otimização web ao servir:
-                    'transformation' => [['quality' => 'auto', 'fetch_format' => 'auto']],
-                ]
-            );
-
-            $data['foto'] = $upload['secure_url'] ?? null;
+            $secureUrl = CloudiNary::upload($request->file('foto'), $publicId);
+            $data['foto'] = $secureUrl;
         } else {
             $data['foto'] = null;
         }
 
-        // 4) Criar e responder
         $project = Project::create([
             'titulo' => $data['titulo'],
-            'descricao' => $data['descricao'],
-            'area' => $data['area'],
-            'data_criacao' => $data['data_criacao'],
-            'status' => $data['status'],
-            'objetivo' => $data['objetivo'],
-            'justificativa' => $data['justificativa'],
+            'descricao' => $data['descricao'] ?? null,
+            'area' => $data['area'] ?? null,
+            'data_criacao' => $data['data_criacao'] ?? now(),
+            'status' => $data['status'] ?? 'ativo',
+            'objetivo' => $data['objetivo'] ?? null,
+            'justificativa' => $data['justificativa'] ?? null,
             'id_grupo' => $data['id_grupo'],
             'id_orientador' => $data['id_orientador'],
-            'foto' => $data['foto'], // já vem null ou URL
+            'foto' => $data['foto'],
         ]);
 
         return response()->json([
@@ -249,28 +222,52 @@ class ProjectController extends Controller
     }
 
 
+
     /**
      * PUT /api/v1/projetos/{id}
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
-        $project = Project::find($id);
-        if (!$project) {
-            return response()->json(['message' => 'Projeto não encontrado'], 404);
-        }
+        $project = Project::findOrFail($id);
 
         $data = $request->validate([
-            'titulo' => 'sometimes|required|string|max:150',
-            'area' => 'nullable|string|max:50',
-            'status' => 'nullable|in:ativo,inativo',
-            'descricao' => 'nullable|string',
-            'objetivo' => 'nullable|string',
-            'justificativa' => 'nullable|string',
+            'titulo' => ['sometimes', 'string', 'max:255'],
+            'descricao' => ['sometimes', 'string'],
+            'area' => ['sometimes', 'string', 'max:100'],
+            'status' => ['sometimes', 'string', 'max:50'],
+            'objetivo' => ['nullable', 'string'],
+            'justificativa' => ['nullable', 'string'],
+            'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'remover_foto' => ['nullable', 'boolean'],
         ]);
 
+        // Remoção explícita
+        if ($request->boolean('remover_foto')) {
+            CloudiNary::destroyByUrl($project->foto);
+            $data['foto'] = null;
+        }
+
+        // Troca de foto
+        if ($request->hasFile('foto')) {
+            // apaga a antiga (se houver)
+            CloudiNary::destroyByUrl($project->foto);
+
+            // sobe a nova
+            $tituloBase = $data['titulo'] ?? $project->titulo;
+            $publicIdNew = Str::slug($tituloBase) . '-' . Str::random(6);
+            $secureUrl = CloudiNary::upload($request->file('foto'), $publicIdNew);
+
+            $data['foto'] = $secureUrl ?? $project->foto;
+        }
+
         $project->update($data);
-        return response()->json($project);
+
+        return response()->json([
+            'message' => 'Projeto atualizado com sucesso',
+            'data' => $project->fresh(),
+        ], 200);
     }
+
 
     /**
      * DELETE /api/v1/projetos/{id}

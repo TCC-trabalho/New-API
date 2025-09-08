@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/CompanyReviewController.php
 
 namespace App\Http\Controllers;
 

@@ -28,8 +28,11 @@ Route::prefix('v1')->group(function () {
     Route::get('/projetos/aluno/{id_aluno}', [ProjectController::class, 'listarPorAluno']);
     Route::get('/projetos/orientador/{id_orientador}', [ProjectController::class, 'listarPorOrientador']);
     Route::get('/projetos/grupo/{id_grupo}', [ProjectController::class, 'listarPorGrupo']);
+    Route::get('/empresas/{id}/projetos-patrocinados', [CompanyController::class, 'listarProjetosPatrocinados']);
+
 
     Route::get('empresas', [CompanyController::class, 'index']);
+    Route::get('/empresa/{id}', [CompanyController::class, 'show']);
     Route::get('/empresas/{id}/projetos', [CompanyController::class, 'showWithProjetos']);
 
     Route::get('grupos', [GroupController::class, 'index']);
