@@ -30,10 +30,30 @@ Route::prefix('v1')->group(function () {
     Route::get('/projetos/grupo/{id_grupo}', [ProjectController::class, 'listarPorGrupo']);
     Route::get('/empresas/{id}/projetos-patrocinados', [CompanyController::class, 'listarProjetosPatrocinados']);
 
+    Route::get(
+        '/projetos/{projeto}/patrocinios/valor/aluno/{aluno}',
+        [PatrocinioController::class, 'valorPorProjetoAluno']
+    );
+    Route::get(
+        '/projetos/{projeto}/patrocinios/valor/orientador/{orientador}',
+        [PatrocinioController::class, 'valorPorProjetoOrientador']
+    );
+
+    Route::get(
+        '/alunos/{aluno}/patrocinios/valor-total',
+        [PatrocinioController::class, 'valorTotalPorAluno']
+    );
+
+    Route::get(
+        '/orientadores/{orientador}/patrocinios/valor-total',
+        [PatrocinioController::class, 'valorTotalPorOrientador']
+    );
+
 
     Route::get('empresas', [CompanyController::class, 'index']);
     Route::get('/empresa/{id}', [CompanyController::class, 'show']);
     Route::get('/empresas/{id}/projetos', [CompanyController::class, 'showWithProjetos']);
+    Route::get('/empresas/{empresa}/avaliacoes/media', [CompanyReviewController::class, 'average']);
 
     Route::get('grupos', [GroupController::class, 'index']);
     Route::get('alunos', [StudentController::class, 'index']);
@@ -48,7 +68,7 @@ Route::prefix('v1')->group(function () {
     Route::post('grupos', [GroupController::class, 'store']);
     Route::post('/grupo/{id}/adicionar-integrantes', [GroupController::class, 'adicionarIntegrantes']);
     Route::post('empresas', [CompanyController::class, 'store']);
-    Route::post('empresas/{empresa}/avaliacoes', [CompanyReviewController::class, 'store']);
+    Route::post('/empresas/{empresa}/avaliacoes', [CompanyReviewController::class, 'store']);
     Route::post('/patrocinios', [PatrocinioController::class, 'store']);
 
     //
@@ -57,18 +77,13 @@ Route::prefix('v1')->group(function () {
     Route::put('projetos/{id}', [ProjectController::class, 'update']);
     Route::put('orientador/{id}', [OrientadorController::class, 'update']);
     Route::put('aluno/{id}', [StudentController::class, 'update']);
-    Route::put('grupos/{id}', [GroupController::class, 'update']);
     Route::put('empresa/{id}', [CompanyController::class, 'update']);
-    Route::put('empresas/{empresa}/avaliacoes/{avaliacao}', [CompanyReviewController::class, 'update']);
 
     //
     // — DELETE —
     //
-    Route::delete('projetos/{id}', [ProjectController::class, 'destroy']);
     Route::delete('orientadores/{id}', [OrientadorController::class, 'destroy']);
     Route::delete('alunos/{id}', [StudentController::class, 'destroy']);
-    Route::delete('grupos/{id}', [GroupController::class, 'destroy']);
     Route::delete('empresas/{id}', [CompanyController::class, 'destroy']);
-    Route::delete('empresas/{empresa}/avaliacoes/{avaliacao}', [CompanyReviewController::class, 'destroy']);
 });
 

@@ -2,73 +2,65 @@
 
 namespace App\Http\Controllers;
 
+use App\Providers\CompanyRatingService;
 use Illuminate\Http\Request;
 use App\Models\Company;
 use App\Models\CompanyReview;
+use Illuminate\Support\Facades\Validator;
 
 class CompanyReviewController extends Controller
 {
     /**
      * POST /api/v1/empresas/{empresa}/avaliacoes
      */
-    public function store(Request $request, $empresa)
+    public function store(Request $request, int $empresa)
     {
+        // valida empresa
         $company = Company::find($empresa);
         if (!$company) {
             return response()->json(['message' => 'Empresa não encontrada'], 404);
         }
 
-        $data = $request->validate([
-            'estrelas' => 'required|integer|between:1,5',
-            'comentario' => 'nullable|string',
+        // valida payload (apenas estrelas)
+        $validator = Validator::make($request->all(), [
+            'estrelas' => ['required', 'integer', 'between:1,5'],
+        ], [
+            'estrelas.required' => 'O campo estrelas é obrigatório.',
+            'estrelas.integer' => 'O campo estrelas deve ser um número inteiro.',
+            'estrelas.between' => 'O campo estrelas deve estar entre 1 e 5.',
         ]);
 
-        $data['id_empresa'] = $empresa;
-        $review = CompanyReview::create($data);
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Erro de validação',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
-        return response()->json($review, 201);
+        // cria avaliação (data do dia vinda do backend)
+        $review = CompanyReview::create([
+            'id_empresa' => $empresa,
+            'estrelas' => (int) $request->input('estrelas'),
+            'data_avaliacao' => now()->toDateString(), // YYYY-MM-DD
+        ]);
+
+        return response()->json([
+            'message' => 'Avaliação registrada com sucesso.',
+            'data' => $review,
+        ], 201);
     }
 
     /**
-     * PUT /api/v1/empresas/{empresa}/avaliacoes/{avaliacao}
+     * GET /api/v1/empresas/{empresa}/avaliacoes/media
      */
-    public function update(Request $request, $empresa, $avaliacao)
+    public function average(int $empresa)
     {
-        $company = Company::find($empresa);
-        if (!$company) {
-            return response()->json(['message' => 'Empresa não encontrada'], 404);
-        }
+        [$avg, $count] = CompanyRatingService::getAverageAndCount($empresa);
 
-        $review = CompanyReview::find($avaliacao);
-        if (!$review || $review->id_empresa != $empresa) {
-            return response()->json(['message' => 'Avaliação não encontrada'], 404);
-        }
-
-        $data = $request->validate([
-            'estrelas' => 'sometimes|required|integer|between:1,5',
-            'comentario' => 'nullable|string',
-        ]);
-
-        $review->update($data);
-        return response()->json($review);
-    }
-
-    /**
-     * DELETE /api/v1/empresas/{empresa}/avaliacoes/{avaliacao}
-     */
-    public function destroy($empresa, $avaliacao)
-    {
-        $company = Company::find($empresa);
-        if (!$company) {
-            return response()->json(['message' => 'Empresa não encontrada'], 404);
-        }
-
-        $review = CompanyReview::find($avaliacao);
-        if (!$review || $review->id_empresa != $empresa) {
-            return response()->json(['message' => 'Avaliação não encontrada'], 404);
-        }
-
-        $review->delete();
-        return response()->json(null, 204);
+        return response()->json([
+            'id_empresa' => $empresa,
+            'avaliacao' => $avg,     // média das estrelas
+            'total_avaliacoes' => $count,
+        ], 200);
     }
 }

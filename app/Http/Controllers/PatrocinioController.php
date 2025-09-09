@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Patrocinio;
+use App\Models\Project;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -62,5 +65,101 @@ class PatrocinioController extends Controller
             'message' => 'Patrocínio criado com sucesso.',
             'patrocinio' => $created,
         ], 201);
+    }
+
+    /**
+     * GET /api/v1/projetos/{projeto}/patrocinios/valor/aluno/{aluno}
+     */
+    public function valorPorProjetoAluno(int $projeto, int $aluno): JsonResponse
+    {
+        $proj = Project::select(['id_projeto', 'id_grupo'])
+            ->where('id_projeto', $projeto)
+            ->first();
+
+        if (!$proj) {
+            return response()->json(['message' => 'Projeto não encontrado'], 404);
+        }
+
+        // valida vínculo do aluno ao grupo do projeto
+        $pertence = DB::table('aluno_grupo')
+            ->where('id_aluno', $aluno)
+            ->where('id_grupo', $proj->id_grupo)
+            ->exists();
+
+        if (!$pertence) {
+            return response()->json(['message' => 'Aluno não pertence ao grupo do projeto'], 403);
+        }
+
+        $valor = $this->sumValorProjeto($projeto);
+
+        // ✅ retorna somente o objeto final (sem response aninhada)
+        return response()->json([
+            'id_projeto' => (int) $projeto,
+            'valor' => (int) $valor,
+        ], 200);
+    }
+
+    /**
+     * GET /api/v1/projetos/{projeto}/patrocinios/valor/orientador/{orientador}
+     */
+    public function valorPorProjetoOrientador(int $projeto, int $orientador): JsonResponse
+    {
+        $proj = Project::select(['id_projeto', 'id_orientador'])
+            ->where('id_projeto', $projeto)
+            ->first();
+
+        if (!$proj) {
+            return response()->json(['message' => 'Projeto não encontrado'], 404);
+        }
+
+        if ((int) $proj->id_orientador !== (int) $orientador) {
+            return response()->json(['message' => 'Orientador não vinculado a este projeto'], 403);
+        }
+
+        $valor = $this->sumValorProjeto($projeto);
+
+        return response()->json([
+            'id_projeto' => (int) $projeto,
+            'valor' => (int) $valor,
+        ], 200);
+    }
+
+    /**
+     * GET /api/v1/alunos/{aluno}/patrocinios/valor-total
+     */
+    public function valorTotalPorAluno(int $aluno): JsonResponse
+    {
+        $valor = (int) DB::table('patrocinio as pt')
+            ->join('projeto as pr', 'pr.id_projeto', '=', 'pt.id_projeto')
+            ->join('aluno_grupo as ag', 'ag.id_grupo', '=', 'pr.id_grupo')
+            ->where('ag.id_aluno', $aluno)
+            ->sum('pt.valorPatrocinio');
+
+        return response()->json([
+            'id_aluno' => $aluno,
+            'valor' => $valor,
+        ], 200);
+    }
+
+    /**
+     * GET /api/v1/orientadores/{orientador}/patrocinios/valor-total
+     */
+    public function valorTotalPorOrientador(int $orientador): JsonResponse
+    {
+        $valor = (int) DB::table('patrocinio as pt')
+            ->join('projeto as pr', 'pr.id_projeto', '=', 'pt.id_projeto')
+            ->where('pr.id_orientador', $orientador)
+            ->sum('pt.valorPatrocinio');
+
+        return response()->json([
+            'id_orientador' => $orientador,
+            'valor' => $valor,
+        ], 200);
+    }
+
+    /** Soma dos valores de patrocínio do projeto. */
+    private function sumValorProjeto(int $idProjeto): int
+    {
+        return (int) Patrocinio::where('id_projeto', $idProjeto)->sum('valorPatrocinio');
     }
 }

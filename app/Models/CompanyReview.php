@@ -15,8 +15,12 @@ class CompanyReview extends Model
     protected $fillable = [
         'id_empresa',
         'estrelas',
-        'comentario',
         'data_avaliacao',
+    ];
+
+    protected $casts = [
+        'estrelas'       => 'integer',
+        'data_avaliacao' => 'date:Y-m-d',
     ];
 
     public function company()

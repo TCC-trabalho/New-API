@@ -34,40 +34,6 @@ class GroupController extends Controller
     }
 
     /**
-     * PUT /api/v1/grupos/{id}
-     */
-    public function update(Request $request, $id)
-    {
-        $group = Group::find($id);
-        if (!$group) {
-            return response()->json(['message' => 'Grupo não encontrado'], 404);
-        }
-
-        $data = $request->validate([
-            'nome' => 'sometimes|required|string|max:100',
-            'descricao' => 'nullable|string',
-            'data_criacao' => 'nullable|date',
-        ]);
-
-        $group->update($data);
-        return response()->json($group);
-    }
-
-    /**
-     * DELETE /api/v1/grupos/{id}
-     */
-    public function destroy($id)
-    {
-        $group = Group::find($id);
-        if (!$group) {
-            return response()->json(['message' => 'Grupo não encontrado'], 404);
-        }
-
-        $group->delete();
-        return response()->json(null, 204);
-    }
-
-    /**
      * POST /api/v1//grupo/{id}/adicionar-integrantes
      */
     public function adicionarIntegrantes(Request $request, $id)

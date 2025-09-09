@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Providers\CloudiNary;
+use App\Providers\CompanyRatingService;
 use Illuminate\Http\Request;
 use App\Models\Company;
 use Illuminate\Support\Facades\DB;
@@ -17,19 +18,27 @@ class CompanyController extends Controller
     public function index(Request $request)
     {
         $empresas = Company::all();
+        $empresas->transform(function ($c) {
+            $c->avaliacao = CompanyRatingService::getAverageForCompany($c->id_empresa);
+            return $c;
+        });
         return response()->json($empresas, 200);
     }
 
     /**
      * GET /api/v1/empresa/{id}
      */
-    public function show($id)
+    public function show(int $id)
     {
-        $empresa = Company::find($id);
-        if (!$empresa) {
+        $company = Company::where('id_empresa', $id)->first();
+
+        if (!$company) {
             return response()->json(['message' => 'Empresa não encontrada'], 404);
         }
-        return response()->json($empresa, 200);
+
+        $company->avaliacao = CompanyRatingService::getAverageForCompany($company->id_empresa);
+
+        return response()->json($company, 200);
     }
 
     /**
@@ -42,6 +51,8 @@ class CompanyController extends Controller
         if (!$empresa) {
             return response()->json(['message' => 'Empresa não encontrada'], 404);
         }
+
+        $empresa->avaliacao = CompanyRatingService::getAverageForCompany($empresa->id_empresa);
 
         $patrocinios = DB::table('patrocinio')
             ->where('id_empresa', $idEmpresa)

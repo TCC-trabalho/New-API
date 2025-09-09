@@ -267,19 +267,4 @@ class ProjectController extends Controller
             'data' => $project->fresh(),
         ], 200);
     }
-
-
-    /**
-     * DELETE /api/v1/projetos/{id}
-     */
-    public function destroy($id)
-    {
-        $project = Project::find($id);
-        if (!$project) {
-            return response()->json(['message' => 'Projeto não encontrado'], 404);
-        }
-
-        $project->delete();
-        return response()->json(null, 204);
-    }
 }
