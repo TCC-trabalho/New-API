@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\InstituitionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProjectController;
@@ -21,6 +22,7 @@ Route::prefix('v1')->group(function () {
     //
     // — GET —
     //
+    Route::get('/instituicoes', [InstituitionController::class, 'index']);
     Route::get('projetos', [ProjectController::class, 'index']);
     Route::get('projetos-controlados', [ProjectController::class, 'projetoControlado']);
     Route::get('projetos/{id}', [ProjectController::class, 'show']);
