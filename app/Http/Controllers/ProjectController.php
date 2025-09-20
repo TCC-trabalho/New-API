@@ -60,6 +60,11 @@ class ProjectController extends Controller
             ->select('a.id_aluno', 'a.nomeUsuario', 'a.nome', 'a.email')
             ->orderBy('a.nomeUsuario')
             ->get();
+        
+        $nomeOrientador = DB::table('orientador')
+            ->where('id_orientador', $projeto->id_orientador)
+            ->select('nome')
+            ->first();   
 
         $qtdIntegrantes = DB::table('aluno_grupo')
             ->where('id_grupo', $projeto->id_grupo)
@@ -84,6 +89,7 @@ class ProjectController extends Controller
                 'integrantes' => $integrantes,
             ],
             'id_orientador' => $projeto->id_orientador,
+            'nome_orientador' => $nomeOrientador?->nome,
             'qnt_empresas_patrocinam' => $projeto->qnt_empresas_patrocinam,
             'status' => $projeto->status ?? null,
         ];

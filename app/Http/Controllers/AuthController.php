@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Providers\CompanyRatingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,7 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        $tipo  = $request->input('tipo');   // 'aluno' | 'orientador' | 'empresa'
+        $tipo = $request->input('tipo');   // 'aluno' | 'orientador' | 'empresa'
         $senha = $request->input('senha');
 
         // Localiza usuário conforme o tipo
@@ -51,6 +52,8 @@ class AuthController extends Controller
                 ->where('id_empresa', $empresa->id_empresa)
                 ->count();
 
+            $mediaAvaliacao = CompanyRatingService::getAverageForCompany($empresa->id_empresa);
+
             return response()->json([
                 'message' => 'Login realizado com sucesso',
                 'user' => [
@@ -64,6 +67,7 @@ class AuthController extends Controller
                     'telefone' => $empresa->telefone,
                     'senha' => $empresa->senha,
                     'qnt_projetos_patrocinados' => $totalPatrocinios,
+                    'avaliacao' => $mediaAvaliacao,
                     'tipoUser' => 'empresa',
                     'foto' => $empresa->foto,
                 ],
@@ -102,8 +106,8 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login realizado com sucesso',
-            'user'    => $payloadUser,
-            'tipo'    => $tipo,
+            'user' => $payloadUser,
+            'tipo' => $tipo,
         ], 200);
     }
 }

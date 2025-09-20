@@ -60,6 +60,7 @@ Route::prefix('v1')->group(function () {
     Route::get('grupos', [GroupController::class, 'index']);
     Route::get('alunos', [StudentController::class, 'index']);
     Route::get('orientadores', [OrientadorController::class, 'index']);
+    Route::get('/orientadores/emails', [OrientadorController::class, 'listarEmails']);
 
     //
     // — POST —

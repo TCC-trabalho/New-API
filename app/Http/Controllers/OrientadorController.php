@@ -17,6 +17,27 @@ class OrientadorController extends Controller
     }
 
     /**
+     * GET /api/v1/orientadores/emails
+     */
+    public function listarEmails()
+    {
+        try {
+            $orientadores = Orientador::select('id_orientador', 'email')->get();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $orientadores
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro ao listar orientadores',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * POST /api/v1/orientadores
      */
     public function store(Request $request)
