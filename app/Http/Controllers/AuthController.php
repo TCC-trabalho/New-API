@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Visitante;
 use App\Providers\CompanyRatingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -15,7 +16,7 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        $tipo = $request->input('tipo');   // 'aluno' | 'orientador' | 'empresa'
+        $tipo = $request->input('tipo');   // 'aluno' | 'orientador' | 'empresa' | 'visitante'
         $senha = $request->input('senha');
 
         // Localiza usuário conforme o tipo
@@ -30,6 +31,10 @@ class AuthController extends Controller
 
             case 'empresa':
                 $user = Empresa::where('cnpj', $request->input('cnpj'))->first();
+                break;
+
+            case 'visitante':
+                $user = Visitante::where('email', $request->input('email'))->first();
                 break;
 
             default:
@@ -72,6 +77,27 @@ class AuthController extends Controller
                     'foto' => $empresa->foto,
                 ],
                 'tipo' => 'empresa',
+            ], 200);
+        }
+
+        if ($tipo === 'visitante') {
+            $totalPatrocinios = DB::table('apoio')
+                ->where('id_visitante', $user->id_visitante)
+                ->count();
+
+            return response()->json([
+                'message' => 'Login realizado com sucesso',
+                'user' => [
+                    'id_visitante' => $user->id_visitante,
+                    'nome' => $user->nome,
+                    'biografia' => $user->biografia,
+                    'email' => $user->email,
+                    'nomeUsuario' => $user->nomeUsuario,
+                    'senha' => $user->senha,
+                    'qnt_projetos_patrocinados' => $totalPatrocinios,
+                    'tipoUser' => 'visitante',
+                ],
+                'tipo' => 'visitante',
             ], 200);
         }
 

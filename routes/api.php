@@ -57,6 +57,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/empresas/{id}/projetos', [CompanyController::class, 'showWithProjetos']);
     Route::get('/empresas/{empresa}/avaliacoes/media', [CompanyReviewController::class, 'average']);
 
+    Route::get('visitantes', [App\Http\Controllers\VisitanteController::class, 'index']);
+    Route::get('/visitantes/{id}/projetos', [App\Http\Controllers\VisitanteController::class, 'showWithProjetos']);
+    Route::get('/visitantes/{id}/projetos-apoiados', [App\Http\Controllers\VisitanteController::class, 'showWithProjetosApoiados']);
+
     Route::get('grupos', [GroupController::class, 'index']);
     Route::get('alunos', [StudentController::class, 'index']);
     Route::get('orientadores', [OrientadorController::class, 'index']);
@@ -73,6 +77,8 @@ Route::prefix('v1')->group(function () {
     Route::post('empresas', [CompanyController::class, 'store']);
     Route::post('/empresas/{empresa}/avaliacoes', [CompanyReviewController::class, 'store']);
     Route::post('/patrocinios', [PatrocinioController::class, 'store']);
+    Route::post('/visitantes', [App\Http\Controllers\VisitanteController::class, 'store']);
+    Route::post('/apoios', [PatrocinioController::class, 'storeApoio']);
 
     //
     // — PUT —
@@ -81,6 +87,7 @@ Route::prefix('v1')->group(function () {
     Route::put('orientador/{id}', [OrientadorController::class, 'update']);
     Route::put('aluno/{id}', [StudentController::class, 'update']);
     Route::put('empresa/{id}', [CompanyController::class, 'update']);
+    Route::put('visitante/{id}', [App\Http\Controllers\VisitanteController::class, 'update']);
 
     //
     // — DELETE —
@@ -88,5 +95,6 @@ Route::prefix('v1')->group(function () {
     Route::delete('orientadores/{id}', [OrientadorController::class, 'destroy']);
     Route::delete('alunos/{id}', [StudentController::class, 'destroy']);
     Route::delete('empresas/{id}', [CompanyController::class, 'destroy']);
+    Route::delete('visitantes/{id}', [App\Http\Controllers\VisitanteController::class, 'destroy']);
 });
 

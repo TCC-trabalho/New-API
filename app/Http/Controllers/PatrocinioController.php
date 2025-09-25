@@ -68,6 +68,61 @@ class PatrocinioController extends Controller
     }
 
     /**
+     * POST /api/v1/apoios
+     */
+    public function storeApoio(Request $request)
+    {
+        $data = $request->validate([
+            'id_visitante' => ['required', 'integer', 'exists:visitante,id_visitante'],
+            'id_projeto' => ['required', 'integer', 'exists:projeto,id_projeto'],
+            'data_patrocinio' => ['nullable', 'date'],
+            'tipo_apoio' => ['required', Rule::in(['dinheiro', 'divulgacao', 'equipamentos', 'capacitacao'])],
+            'mensagem' => ['nullable', 'string'],
+            'valorPatrocinio' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        if (empty($data['data_patrocinio'])) {
+            $data['data_patrocinio'] = now()->toDateString();
+        }
+
+        $exists = DB::table('apoio')
+            ->where('id_visitante', $data['id_visitante'])
+            ->where('id_projeto', $data['id_projeto'])
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'message' => 'Este visitante já apoia este projeto.'
+            ], 409);
+        }
+
+        $created = DB::transaction(function () use ($data) {
+            DB::table('apoio')->insert([
+                'id_visitante' => $data['id_visitante'],
+                'id_projeto' => $data['id_projeto'],
+                'data_patrocinio' => $data['data_patrocinio'],
+                'tipo_apoio' => $data['tipo_apoio'],
+                'mensagem' => $data['mensagem'] ?? null,
+                'valorPatrocinio' => $data['valorPatrocinio'] ?? null,
+            ]);
+
+            DB::table('visitante')
+                ->where('id_visitante', $data['id_visitante'])
+                ->increment('qnt_projetos_apoidados', 1);
+
+            return DB::table('apoio')
+                ->where('id_visitante', $data['id_visitante'])
+                ->where('id_projeto', $data['id_projeto'])
+                ->first();
+        });
+
+        return response()->json([
+            'message' => 'Apoio criado com sucesso.',
+            'patrocinio' => $created,
+        ], 201);
+    }
+
+    /**
      * GET /api/v1/projetos/{projeto}/patrocinios/valor/aluno/{aluno}
      */
     public function valorPorProjetoAluno(int $projeto, int $aluno): JsonResponse
