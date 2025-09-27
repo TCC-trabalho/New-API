@@ -52,10 +52,10 @@ class AuthController extends Controller
             if (!$empresa) {
                 return response()->json(['message' => 'Empresa não encontrada'], 404);
             }
-
             $totalPatrocinios = DB::table('patrocinio')
                 ->where('id_empresa', $empresa->id_empresa)
-                ->count();
+                ->distinct()
+                ->count('id_projeto');
 
             $mediaAvaliacao = CompanyRatingService::getAverageForCompany($empresa->id_empresa);
 
@@ -81,9 +81,11 @@ class AuthController extends Controller
         }
 
         if ($tipo === 'visitante') {
+
             $totalPatrocinios = DB::table('apoio')
                 ->where('id_visitante', $user->id_visitante)
-                ->count();
+                ->distinct()
+                ->count('id_projeto');
 
             return response()->json([
                 'message' => 'Login realizado com sucesso',

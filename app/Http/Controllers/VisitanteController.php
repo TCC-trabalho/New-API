@@ -24,15 +24,20 @@ class VisitanteController extends Controller
     public function showWithProjetos(int $idVisitante)
     {
         // 1) Visitante
-        $visitante = DB::table('visitantes')->where('id_visitante', $idVisitante)->first();
+        $visitante = DB::table('visitante')->where('id_visitante', $idVisitante)->first();
         if (!$visitante) {
             return response()->json(['message' => 'Visitante não encontrado'], 404);
         }
 
         $apoios = DB::table('apoio')
             ->where('id_visitante', $idVisitante)
-            ->select('id_projeto', 'data_patrocinio', 'tipo_apoio')
-            ->orderByDesc('data_patrocinio')
+            ->select(
+                'id_projeto',
+                DB::raw('MAX(data_apoio) AS data_apoio'),
+                DB::raw('MAX(tipo_apoio) AS tipo_apoio')
+            )
+            ->groupBy('id_projeto')
+            ->orderByDesc('data_apoio')
             ->get();
 
         if ($apoios->isEmpty()) {
@@ -56,7 +61,7 @@ class VisitanteController extends Controller
                 : null;
 
             if ($projeto) {
-                $projeto['data_patrocinio'] = $p->data_patrocinio;
+                $projeto['data_apoio'] = $p->data_apoio;
                 $projeto['tipo_apoio'] = $p->tipo_apoio;
                 $projetos[] = $projeto;
             }
@@ -78,15 +83,16 @@ class VisitanteController extends Controller
         if (!$visitante) {
             return response()->json(['message' => 'Visitante não encontrado'], 404);
         }
-
         $projetos = $visitante->projects()
-            ->withPivot('data_patrocinio', 'tipo_apoio', 'valorPatrocinio', 'mensagem')
+            ->withPivot('data_apoio', 'tipo_apoio', 'valorApoio', 'mensagem')
             ->orderBy('projeto.id_projeto', 'desc')
-            ->get();
+            ->get()
+            ->unique('id_projeto')
+            ->values();
 
         return response()->json([
             'total_projetos' => $projetos->count(),
-            'projetos_patrocinados' => $projetos,
+            'projetos_apoiados' => $projetos,
         ], 200);
     }
 

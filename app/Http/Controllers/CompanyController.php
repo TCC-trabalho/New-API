@@ -56,7 +56,8 @@ class CompanyController extends Controller
 
         $patrocinios = DB::table('patrocinio')
             ->where('id_empresa', $idEmpresa)
-            ->select('id_projeto', 'data_patrocinio', 'tipo_apoio')
+            ->select('id_projeto', DB::raw('MAX(data_patrocinio) as data_patrocinio'), DB::raw('MAX(tipo_apoio) as tipo_apoio'))
+            ->groupBy('id_projeto')
             ->orderByDesc('data_patrocinio')
             ->get();
 
@@ -108,7 +109,9 @@ class CompanyController extends Controller
         $projetos = $company->projects()
             ->withPivot('data_patrocinio', 'tipo_apoio', 'valorPatrocinio', 'mensagem')
             ->orderBy('projeto.id_projeto', 'desc')
-            ->get();
+            ->get()
+            ->unique('id_projeto')
+            ->values();
 
         return response()->json([
             'total_projetos' => $projetos->count(),

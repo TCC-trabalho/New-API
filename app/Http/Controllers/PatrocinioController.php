@@ -30,17 +30,6 @@ class PatrocinioController extends Controller
             $data['data_patrocinio'] = now()->toDateString();
         }
 
-        $exists = DB::table('patrocinio')
-            ->where('id_empresa', $data['id_empresa'])
-            ->where('id_projeto', $data['id_projeto'])
-            ->exists();
-
-        if ($exists) {
-            return response()->json([
-                'message' => 'Esta empresa já patrocina este projeto.'
-            ], 409);
-        }
-
         $created = DB::transaction(function () use ($data) {
             DB::table('patrocinio')->insert([
                 'id_empresa' => $data['id_empresa'],
@@ -75,40 +64,29 @@ class PatrocinioController extends Controller
         $data = $request->validate([
             'id_visitante' => ['required', 'integer', 'exists:visitante,id_visitante'],
             'id_projeto' => ['required', 'integer', 'exists:projeto,id_projeto'],
-            'data_patrocinio' => ['nullable', 'date'],
+            'data_apoio' => ['nullable', 'date'],
             'tipo_apoio' => ['required', Rule::in(['dinheiro', 'divulgacao', 'equipamentos', 'capacitacao'])],
             'mensagem' => ['nullable', 'string'],
-            'valorPatrocinio' => ['nullable', 'integer', 'min:0'],
+            'valorApoio' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        if (empty($data['data_patrocinio'])) {
-            $data['data_patrocinio'] = now()->toDateString();
-        }
-
-        $exists = DB::table('apoio')
-            ->where('id_visitante', $data['id_visitante'])
-            ->where('id_projeto', $data['id_projeto'])
-            ->exists();
-
-        if ($exists) {
-            return response()->json([
-                'message' => 'Este visitante já apoia este projeto.'
-            ], 409);
+        if (empty($data['data_apoio'])) {
+            $data['data_apoio'] = now()->toDateString();
         }
 
         $created = DB::transaction(function () use ($data) {
             DB::table('apoio')->insert([
                 'id_visitante' => $data['id_visitante'],
                 'id_projeto' => $data['id_projeto'],
-                'data_patrocinio' => $data['data_patrocinio'],
+                'data_apoio' => $data['data_apoio'],
                 'tipo_apoio' => $data['tipo_apoio'],
                 'mensagem' => $data['mensagem'] ?? null,
-                'valorPatrocinio' => $data['valorPatrocinio'] ?? null,
+                'valorApoio' => $data['valorApoio'] ?? null,
             ]);
 
             DB::table('visitante')
                 ->where('id_visitante', $data['id_visitante'])
-                ->increment('qnt_projetos_apoidados', 1);
+                ->increment('qnt_projetos_patrocinados', 1);
 
             return DB::table('apoio')
                 ->where('id_visitante', $data['id_visitante'])
@@ -147,7 +125,6 @@ class PatrocinioController extends Controller
 
         $valor = $this->sumValorProjeto($projeto);
 
-        // ✅ retorna somente o objeto final (sem response aninhada)
         return response()->json([
             'id_projeto' => (int) $projeto,
             'valor' => (int) $valor,
@@ -184,15 +161,23 @@ class PatrocinioController extends Controller
      */
     public function valorTotalPorAluno(int $aluno): JsonResponse
     {
-        $valor = (int) DB::table('patrocinio as pt')
+        // Patrocínios em projetos dos grupos do aluno
+        $valorPat = (int) DB::table('patrocinio as pt')
             ->join('projeto as pr', 'pr.id_projeto', '=', 'pt.id_projeto')
             ->join('aluno_grupo as ag', 'ag.id_grupo', '=', 'pr.id_grupo')
             ->where('ag.id_aluno', $aluno)
             ->sum('pt.valorPatrocinio');
 
+        // Apoios em projetos dos grupos do aluno
+        $valorApo = (int) DB::table('apoio as ap')
+            ->join('projeto as pr', 'pr.id_projeto', '=', 'ap.id_projeto')
+            ->join('aluno_grupo as ag', 'ag.id_grupo', '=', 'pr.id_grupo')
+            ->where('ag.id_aluno', $aluno)
+            ->sum('ap.valorApoio');
+
         return response()->json([
-            'id_aluno' => $aluno,
-            'valor' => $valor,
+            'id_aluno' => (int) $aluno,
+            'valor' => (int) ($valorPat + $valorApo),
         ], 200);
     }
 
@@ -201,20 +186,35 @@ class PatrocinioController extends Controller
      */
     public function valorTotalPorOrientador(int $orientador): JsonResponse
     {
-        $valor = (int) DB::table('patrocinio as pt')
+        // Patrocínios de projetos orientados
+        $valorPat = (int) DB::table('patrocinio as pt')
             ->join('projeto as pr', 'pr.id_projeto', '=', 'pt.id_projeto')
             ->where('pr.id_orientador', $orientador)
             ->sum('pt.valorPatrocinio');
 
+        // Apoios de projetos orientados
+        $valorApo = (int) DB::table('apoio as ap')
+            ->join('projeto as pr', 'pr.id_projeto', '=', 'ap.id_projeto')
+            ->where('pr.id_orientador', $orientador)
+            ->sum('ap.valorApoio');
+
         return response()->json([
-            'id_orientador' => $orientador,
-            'valor' => $valor,
+            'id_orientador' => (int) $orientador,
+            'valor' => (int) ($valorPat + $valorApo),
         ], 200);
     }
 
     /** Soma dos valores de patrocínio do projeto. */
     private function sumValorProjeto(int $idProjeto): int
     {
-        return (int) Patrocinio::where('id_projeto', $idProjeto)->sum('valorPatrocinio');
+        $patrocinio = (int) DB::table('patrocinio')
+            ->where('id_projeto', $idProjeto)
+            ->sum('valorPatrocinio');
+
+        $apoio = (int) DB::table('apoio')
+            ->where('id_projeto', $idProjeto)
+            ->sum('valorApoio');
+
+        return $patrocinio + $apoio;
     }
 }

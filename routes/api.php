@@ -59,7 +59,7 @@ Route::prefix('v1')->group(function () {
 
     Route::get('visitantes', [App\Http\Controllers\VisitanteController::class, 'index']);
     Route::get('/visitantes/{id}/projetos', [App\Http\Controllers\VisitanteController::class, 'showWithProjetos']);
-    Route::get('/visitantes/{id}/projetos-apoiados', [App\Http\Controllers\VisitanteController::class, 'showWithProjetosApoiados']);
+    Route::get('/visitantes/{id}/projetos-apoiados', [App\Http\Controllers\VisitanteController::class, 'showProjetosApoiados']);
 
     Route::get('grupos', [GroupController::class, 'index']);
     Route::get('alunos', [StudentController::class, 'index']);

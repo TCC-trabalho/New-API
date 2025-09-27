@@ -25,6 +25,6 @@ class Visitante extends Model
     public function projects()
     {
         return $this->belongsToMany(Project::class, 'apoio', 'id_visitante', 'id_projeto')
-            ->withPivot('data_patrocinio', 'tipo_apoio');
+            ->withPivot('data_apoio', 'tipo_apoio');
     }
 }
