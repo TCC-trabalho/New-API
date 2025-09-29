@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApoioController;
 use App\Http\Controllers\InstituitionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -79,6 +80,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/patrocinios', [PatrocinioController::class, 'store']);
     Route::post('/visitantes', [App\Http\Controllers\VisitanteController::class, 'store']);
     Route::post('/apoios', [PatrocinioController::class, 'storeApoio']);
+    Route::post('/solicitar-apoio', [ApoioController::class, 'solicitar']);
 
     //
     // — PUT —
