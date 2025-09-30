@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\SolicitarApoioMail;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
+use App\Services\ResendService;
 
 class ApoioController extends Controller
 {
-    public function solicitar(Request $request)
+    public function solicitar(Request $request, ResendService $resendService)
     {
         $request->validate([
             'nome_usuario' => 'required|string',
@@ -20,11 +19,9 @@ class ApoioController extends Controller
             'email_empresa' => 'required|email',
         ]);
 
-        $dados = $request->all();
-
-        Mail::to($request->email_empresa)
-            ->send(new SolicitarApoioMail($dados));
+        $resendService->sendSupportRequest($request->all());
 
         return response()->json(['message' => 'Solicitação enviada com sucesso!']);
     }
 }
+
