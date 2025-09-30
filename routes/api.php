@@ -94,9 +94,9 @@ Route::prefix('v1')->group(function () {
     //
     // — DELETE —
     //
-    Route::delete('orientadores/{id}', [OrientadorController::class, 'destroy']);
-    Route::delete('alunos/{id}', [StudentController::class, 'destroy']);
-    Route::delete('empresas/{id}', [CompanyController::class, 'destroy']);
-    Route::delete('visitantes/{id}', [App\Http\Controllers\VisitanteController::class, 'destroy']);
+    Route::delete('orientador/{id}', [OrientadorController::class, 'destroy']);
+    Route::delete('aluno/{id}', [StudentController::class, 'destroy']);
+    Route::delete('empresa/{id}', [CompanyController::class, 'destroy']);
+    Route::delete('visitante/{id}', [App\Http\Controllers\VisitanteController::class, 'destroy']);
 });
 
