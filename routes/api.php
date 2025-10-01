@@ -47,6 +47,8 @@ Route::prefix('v1')->group(function () {
         [PatrocinioController::class, 'valorTotalPorAluno']
     );
 
+    Route::get('grupo/{id}/integrantes', [GroupController::class, 'integrantes']);
+
     Route::get(
         '/orientadores/{orientador}/patrocinios/valor-total',
         [PatrocinioController::class, 'valorTotalPorOrientador']
@@ -74,7 +76,7 @@ Route::prefix('v1')->group(function () {
     Route::post('orientadores', [OrientadorController::class, 'store']);
     Route::post('alunos', [StudentController::class, 'store']);
     Route::post('grupos', [GroupController::class, 'store']);
-    Route::post('/grupo/{id}/adicionar-integrantes', [GroupController::class, 'adicionarIntegrantes']);
+    Route::post('/grupo/{id}/adicionar-integrantes', [GroupController::class, 'adicionarIntegrante']);
     Route::post('empresas', [CompanyController::class, 'store']);
     Route::post('/empresas/{empresa}/avaliacoes', [CompanyReviewController::class, 'store']);
     Route::post('/patrocinios', [PatrocinioController::class, 'store']);
@@ -98,5 +100,6 @@ Route::prefix('v1')->group(function () {
     Route::delete('aluno/{id}', [StudentController::class, 'destroy']);
     Route::delete('empresa/{id}', [CompanyController::class, 'destroy']);
     Route::delete('visitante/{id}', [App\Http\Controllers\VisitanteController::class, 'destroy']);
+    Route::delete('/grupo/{idGrupo}/remover-integrante/{idAluno}', [GroupController::class, 'removerIntegrante']);
 });
 

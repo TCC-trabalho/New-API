@@ -12,7 +12,8 @@ class StudentController extends Controller
      */
     public function index()
     {
-        $students = Student::all();
+        $students = Student::select('id_aluno', 'nome', 'email')->get();
+    
         return response()->json($students);
     }
 
