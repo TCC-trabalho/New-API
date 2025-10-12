@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use App\Models\UsuarioContaMP;
 use App\Providers\CloudiNary;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -60,11 +61,11 @@ class ProjectController extends Controller
             ->select('a.id_aluno', 'a.nomeUsuario', 'a.nome', 'a.email')
             ->orderBy('a.nomeUsuario')
             ->get();
-        
+
         $nomeOrientador = DB::table('orientador')
             ->where('id_orientador', $projeto->id_orientador)
             ->select('nome')
-            ->first();   
+            ->first();
 
         $qtdIntegrantes = DB::table('aluno_grupo')
             ->where('id_grupo', $projeto->id_grupo)
@@ -90,6 +91,8 @@ class ProjectController extends Controller
             ],
             'id_orientador' => $projeto->id_orientador,
             'nome_orientador' => $nomeOrientador?->nome,
+            'id_gestor_financeiro' => $projeto->id_gestor_financeiro,
+            'tipo_gestor' => $projeto->tipo_gestor,
             'qnt_empresas_patrocinam' => $projeto->qnt_empresas_patrocinam,
             'status' => $projeto->status ?? null,
         ];
@@ -227,8 +230,6 @@ class ProjectController extends Controller
         ], 201);
     }
 
-
-
     /**
      * PUT /api/v1/projetos/{id}
      */
@@ -273,4 +274,38 @@ class ProjectController extends Controller
             'data' => $project->fresh(),
         ], 200);
     }
+
+    public function definirGestorFinanceiro(Request $request, $id)
+    {
+        // validação básica
+        $request->validate([
+            'id_usuario' => 'required|integer',
+            'tipo_usuario' => 'required|in:aluno,orientador',
+        ]);
+
+        $projeto = Project::findOrFail($id);
+
+        // verifica se o usuário realmente tem conta Mercado Pago vinculada
+        $conta = UsuarioContaMP::where('id_usuario', $request->id_usuario)
+            ->where('tipo_usuario', $request->tipo_usuario)
+            ->first();
+
+        if (!$conta) {
+            return response()->json([
+                'erro' => 'Este usuário não possui uma conta Mercado Pago vinculada à plataforma.'
+            ], 400);
+        }
+
+        // atualiza o projeto com o gestor e tipo
+        $projeto->update([
+            'id_gestor_financeiro' => $request->id_usuario,
+            'tipo_gestor' => $request->tipo_usuario,
+        ]);
+
+        return response()->json([
+            'mensagem' => 'Gestor financeiro vinculado com sucesso!',
+            'projeto' => $projeto,
+        ]);
+    }
+
 }

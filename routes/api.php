@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApoioController;
 use App\Http\Controllers\InstituitionController;
+use App\Http\Controllers\MercadoPagoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProjectController;
@@ -92,6 +93,7 @@ Route::prefix('v1')->group(function () {
     Route::put('aluno/{id}', [StudentController::class, 'update']);
     Route::put('empresa/{id}', [CompanyController::class, 'update']);
     Route::put('visitante/{id}', [App\Http\Controllers\VisitanteController::class, 'update']);
+    Route::put('/projetos/{id}/gestor', [ProjectController::class, 'definirGestorFinanceiro']);
 
     //
     // — DELETE —
@@ -101,5 +103,13 @@ Route::prefix('v1')->group(function () {
     Route::delete('empresa/{id}', [CompanyController::class, 'destroy']);
     Route::delete('visitante/{id}', [App\Http\Controllers\VisitanteController::class, 'destroy']);
     Route::delete('/grupo/{idGrupo}/remover-integrante/{idAluno}', [GroupController::class, 'removerIntegrante']);
+
+
+    // ROTAS DE PAGAMENTO
+    Route::post('/pagamentos/pix/{idProjeto}', [MercadoPagoController::class, 'criarPix']);
+    Route::get('/mercadopago/connect', [MercadoPagoController::class, 'connect']);
+    Route::get('/mercadopago/callback', [MercadoPagoController::class, 'callback']);
+    Route::get('/mercadopago/status', [MercadoPagoController::class, 'status']);
+    Route::post('/mercadopago/webhooks', [MercadoPagoController::class, 'webhook']);
 });
 
