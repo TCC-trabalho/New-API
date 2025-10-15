@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Providers\ResendService;
 use Illuminate\Http\Request;
-use App\Services\ResendService;
 
 class ApoioController extends Controller
 {
