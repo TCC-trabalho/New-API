@@ -17,10 +17,20 @@ class ResendService
     public function sendSupportRequest($dados)
     {
         return $this->client->emails->send([
-            'from' => env('MAIL_FROM_NAME').' <'.env('MAIL_FROM_ADDRESS').'>',
+            'from' => 'Nexus Apoios <apoios@nexus.caetanodev.com>',
             'to' => [$dados['email_empresa']],
             'subject' => 'Nova solicitação de apoio',
             'html' => view('emails.solicitar_apoio', compact('dados'))->render(),
+        ]);
+    }
+
+    public function sendPasswordResetCode($dados)
+    {
+        return $this->client->emails->send([
+            'from' => 'Nexus Suporte <suporte@nexus.caetanodev.com>',
+            'to' => [$dados['email_destino']],
+            'subject' => 'Recuperação de senha - NEXUS',
+            'html' => view('emails.redefinir_senha', compact('dados'))->render(),
         ]);
     }
 }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApoioController;
 use App\Http\Controllers\InstituitionController;
 use App\Http\Controllers\MercadoPagoController;
+use App\Http\Controllers\RedefinirSenhaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProjectController;
@@ -84,6 +85,12 @@ Route::prefix('v1')->group(function () {
     Route::post('/visitantes', [App\Http\Controllers\VisitanteController::class, 'store']);
     Route::post('/apoios', [PatrocinioController::class, 'storeApoio']);
     Route::post('/solicitar-apoio', [ApoioController::class, 'solicitar']);
+
+    Route::prefix('senha')->group(function () {
+        Route::post('/enviar-codigo', [RedefinirSenhaController::class, 'enviarCodigo']);
+        Route::post('/verificar-codigo', [RedefinirSenhaController::class, 'verificarCodigo']);
+        Route::post('/redefinir', [RedefinirSenhaController::class, 'redefinirSenha']);
+    });
 
     //
     // — PUT —

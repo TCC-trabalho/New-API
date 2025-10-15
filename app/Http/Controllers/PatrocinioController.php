@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Patrocinio;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
