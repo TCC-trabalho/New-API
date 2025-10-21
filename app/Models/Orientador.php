@@ -16,8 +16,6 @@ class Orientador extends Model
     protected $fillable = [
         'nome',
         'biografia',
-        'cpf',
-        'rg',
         'email',
         'telefone',
         'formacao',
