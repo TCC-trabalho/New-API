@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use App\Models\UsuarioContaMP;
 use App\Providers\CloudiNary;
+use App\Providers\MercadoPagoProvider;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\Project;
@@ -296,7 +297,31 @@ class ProjectController extends Controller
             ], 400);
         }
 
-        // atualiza o projeto com o gestor e tipo
+        // verifica se há access token salvo
+        if (empty($conta->mp_access_token)) {
+            return response()->json([
+                'erro' => 'A conta Mercado Pago vinculada não possui um access token ativo. ' .
+                    'Peça ao usuário para refazer a vinculação.'
+            ], 400);
+        }
+
+        // descriptografa token
+        try {
+            $accessToken = \Illuminate\Support\Facades\Crypt::decryptString($conta->mp_access_token);
+        } catch (\Exception $e) {
+            return response()->json([
+                'erro' => 'Falha ao descriptografar o access token. Refazer a vinculação pode resolver.'
+            ], 400);
+        }
+
+
+        $mp = new MercadoPagoProvider();
+        // valida a conta Mercado Pago (usa a função auxiliar)
+        if ($erro = $mp->validarContaMercadoPago($accessToken)) {
+            return $erro;
+        }
+
+        // se passou por todas as verificações, atualiza o projeto
         $projeto->update([
             'id_gestor_financeiro' => $request->id_usuario,
             'tipo_gestor' => $request->tipo_usuario,
@@ -307,5 +332,6 @@ class ProjectController extends Controller
             'projeto' => $projeto,
         ]);
     }
+
 
 }

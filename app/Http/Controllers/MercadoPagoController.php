@@ -138,6 +138,10 @@ class MercadoPagoController extends Controller
         // descriptografa o token atualizado
         $gestorAccessToken = Crypt::decryptString($gestor->mp_access_token);
 
+        if ($erro = $mp->validarContaMercadoPago($gestorAccessToken)) {
+            return $erro;
+        }
+
         // define comissão (exemplo: 5%)
         $applicationFee = round($valor * 0.05, 2);
 

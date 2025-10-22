@@ -61,4 +61,32 @@ class MercadoPagoProvider
             return null;
         }
     }
+
+    public function validarContaMercadoPago(string $accessToken)
+    {
+        $infoConta = Http::withToken($accessToken)
+            ->get('https://api.mercadopago.com/users/me')
+            ->json();
+
+        // falha na consulta
+        if (($infoConta['status'] ?? null) === 403 || !isset($infoConta['id'])) {
+            return response()->json([
+                'erro' => 'Não foi possível validar a conta Mercado Pago.',
+                'detalhes' => $infoConta,
+            ], 400);
+        }
+
+        // conta sem permissão de QR
+        if (($infoConta['user_type'] ?? '') !== 'seller') {
+            return response()->json([
+                'erro' => 'A conta vinculada não possui permissão para gerar QR Codes. ' .
+                    'Peça ao titular que ative o recurso de vendas com QR no painel do Mercado Pago.',
+                'detalhes' => [
+                    'user_type' => $infoConta['user_type'] ?? 'desconhecido'
+                ]
+            ], 400);
+        }
+
+        return null; // validação ok
+    }
 }
